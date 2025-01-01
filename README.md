@@ -22,6 +22,8 @@
 
 # 使用说明
 
+---
+
 ## 1：设备信息页
 
 ![设备信息页](https://github.com/zzydd/MineCompass/blob/main/images/PageA-1.png?raw=true "设备信息页")
