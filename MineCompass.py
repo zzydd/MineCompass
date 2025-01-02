@@ -73,7 +73,7 @@ Main_Install_state = False
 Main_StartMenu_state = False
 Connect_Detecting_State = True
 
-
+MainPageIndex = 0
 
 
 #【UI窗口】
@@ -1232,6 +1232,7 @@ class MainWindow(ctk.CTk):
                 entry_C6_1.insert(0, lng)  # 经度-输入
                 entry_C6_2.delete(0, "end")  # 维度-清空
                 entry_C6_2.insert(0, lat)  # 维度-输入
+                print("输入框全空，未输入完成 - 使用IP定位")
 
             #已输入地址 且 地址或坐标有变化 - 使用地理编码定位
             elif (address_text!="" and (
@@ -1245,6 +1246,7 @@ class MainWindow(ctk.CTk):
                 entry_C6_1.insert(0, lng)  # 经度-输入
                 entry_C6_2.delete(0, "end")  # 维度-清空
                 entry_C6_2.insert(0, lat)  # 维度-输入
+                print("已输入地址 且 地址或坐标有变化 - 使用地理编码定位")
 
             # 已输入地址 但 地址和坐标无变化 - 提示
             elif (address_text != "" and(
@@ -1299,6 +1301,7 @@ class MainWindow(ctk.CTk):
                 else:
                     Warning_Window("非法坐标！请检查输入","Mine Compass 定位",True)
                     return False
+                print("未输入地址 且 输入了坐标 - 使用地理解码:")
             # WTF?
             else:
                 Questions_Window("无法定位，你在开玩笑吗？", "Mine Compass 定位", True)
@@ -3266,7 +3269,7 @@ class MainWindow(ctk.CTk):
         image_label_F1.pack(side="left", padx=(0, 5), pady=0)
         # 程序信息-文本-内容(F1)
         label_F1_2 = ctk.CTkLabel(label_F1_frame,
-                                  text="Mine Compass v1.1",
+                                  text="Mine Compass v1.2.0",
                                   padx=10,
                                   font=("Microsoft YaHei UI", 18))
         label_F1_2.pack(side="left", padx=(5, 5), pady=0)
@@ -3538,6 +3541,8 @@ class MainWindow(ctk.CTk):
     def show_page(self, index):
         """切换显示页面"""
         global MainState
+        global MainPageIndex
+        MainPageIndex = index
         # 判断状态
         if index in [0,4,5]: # 页面白名单
             pass
@@ -4974,7 +4979,7 @@ def Uninstall_from_system():
         # 创建删除脚本
         script = ('''
         @echo off
-        chcp 65001 > unlog.tmp
+        chcp 65001> nul
         title Mine Compass 卸载程序
         color 06
         cd /d %~dp0
@@ -4982,7 +4987,7 @@ def Uninstall_from_system():
         echo.
         echo.准备中，请等待3秒...
         echo.
-        timeout /t 3 /NOBREAK > unlog.tmp
+        timeout /t 3 /NOBREAK >nul
         cls
         echo.
         echo.【Mine Compass 卸载程序】
@@ -4994,8 +4999,7 @@ def Uninstall_from_system():
         echo.完成后，卸载程序也将自毁。
         echo.
         echo.[按任意键开始卸载]→
-        pause > unlog.tmp
-        del /f /s /q unlog.tmp
+        pause >nul
         taskkill /f /im MineCompass.exe
         rmdir /s /q MineCompass & msg %username% /time:5 "Mine Compass 卸载完成！" & exit
         ''')
@@ -5081,10 +5085,12 @@ def Connect_Detecting():
     Failed_Times = 0 # 失败次数
     while Connect_Detecting_State:
         if MainState:
-            ip = GET_IP(ip=MainAddress,timeout=1)
-            if ip == MainAddress:
+            state, ip = GET_IP(ip=MainAddress,timeout=1)
+            if state:
                 Failed_Times = 0
                 print("[检测线程] 设备已连接")
+            elif not state and MainPageIndex==1 and MainAddress=="192.168.4.1":
+                print("[检测线程] 设备未连接-网络配置")
             else:
                 Failed_Times = Failed_Times+1
                 print("[检测线程] 设备连接失败")
@@ -5122,11 +5128,11 @@ def GET_IP(ip,timeout=0):
         if ReturnCode == 200: #请求成功
             text = response.text
             print(text)
-            return text
+            return True,text
         else: #请求失败
-            return False
+            return False,None
     except:
-        return False
+        return False,None
 
 # [2]【设置索引】
 def POST_Index(ip, index):
@@ -5270,8 +5276,6 @@ def Fuck_404():
 if __name__ == "__main__":
 
     """启动任务载荷"""
-    # 适配DIP
-    ctypes.windll.shcore.SetProcessDpiAwareness(1)
     # 获取信息
     User_Appdata_Path = os.environ['LOCALAPPDATA'] # 用户Appdata-Local位置
     User_Menu_Path = os.path.join(os.environ['APPDATA'], "Microsoft", "Windows", "Start Menu", "Programs")
@@ -5284,6 +5288,8 @@ if __name__ == "__main__":
     """测试任务载荷"""
 
     """主任务载荷"""
+    # 适配DIP
+    ctypes.windll.shcore.SetProcessDpiAwareness(1)
 
     # 创建程序数据目录
     try:
